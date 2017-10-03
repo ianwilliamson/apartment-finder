@@ -31,7 +31,7 @@ class Listing(Base):
     location = Column(String)
     cl_id = Column(Integer, unique=True)
     area = Column(String)
-    bart_stop = Column(String)
+    train_stop = Column(String)
 
 Base.metadata.create_all(engine)
 
@@ -48,7 +48,7 @@ def scrape_area(area):
                              filters={'max_price': settings.MAX_PRICE, "min_price": settings.MIN_PRICE})
 
     results = []
-    gen = cl_h.get_results(sort_by='newest', geotagged=True, limit=20)
+    gen = cl_h.get_results(sort_by='newest', geotagged=True, limit=20,include_details=True)
     while True:
         try:
             result = next(gen)
@@ -75,8 +75,9 @@ def scrape_area(area):
                 geo_data = find_points_of_interest(result["geotag"], result["where"])
                 result.update(geo_data)
             else:
-                result["area"] = ""
-                result["bart"] = ""
+                result["areaname"] = ""
+                result["stationname"] = ""
+                result["near_train"] = False
 
             # Try parsing the price.
             price = 0
@@ -84,6 +85,14 @@ def scrape_area(area):
                 price = float(result["price"].replace("$", ""))
             except Exception:
                 pass
+
+            cats = 2
+            body = result["body"].lower()
+            if ("cats not allowed" in body) or ("no pets" in body):
+                cats = 0
+            elif " cats " in body:
+                cats = 1
+            result["cats"] = cats
 
             # Create the listing object.
             listing = Listing(
@@ -96,7 +105,7 @@ def scrape_area(area):
                 location=result["where"],
                 cl_id=result["id"],
                 area=result["area"],
-                bart_stop=result["bart"]
+                train_stop=result["stationname"]
             )
 
             # Save the listing so we don't grab it again.
@@ -104,7 +113,7 @@ def scrape_area(area):
             session.commit()
 
             # Return the result if it's near a bart station, or if it is in an area we defined.
-            if len(result["bart"]) > 0 or len(result["area"]) > 0:
+            if result["cats"] and (result["near_train"] or len(result["areaname"]) > 0):
                 results.append(result)
 
     return results

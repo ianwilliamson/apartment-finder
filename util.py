@@ -8,15 +8,15 @@ def coord_distance(lat1, lon1, lat2, lon2):
     :param lon1: Point 1 longitude.
     :param lat2: Point two latitude.
     :param lon2: Point two longitude.
-    :return: Kilometer distance.
+    :return: Miles distance.
     """
     lon1, lat1, lon2, lat2 = map(math.radians, [lon1, lat1, lon2, lat2])
     dlon = lon2 - lon1
     dlat = lat2 - lat1
     a = math.sin(dlat/2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon/2)**2
     c = 2 * math.asin(math.sqrt(a))
-    km = 6367 * c
-    return km
+    miles = 0.621371 * 6367 * c
+    return miles
 
 def in_box(coords, box):
     """
@@ -35,10 +35,19 @@ def post_listing_to_slack(sc, listing):
     :param sc: A slack client.
     :param listing: A record of the listing.
     """
-    desc = "{0} | {1} | {2} | {3} | <{4}>".format(listing["area"], listing["price"], listing["bart_dist"], listing["name"], listing["url"])
+    cats=dict()
+    cats[0] = ":cat::x:"
+    cats[1] = ":cat::smiley_cat:"
+    cats[2] = ":cat::question:"
+
+    if listing["area"] is None:
+        area_str = "____ sq ft"
+    else:
+        area_str = listing["area"].replace("ft2"," sq ft")
+    desc = "*{}*, {} | {} | {:.2f} mi - *{}* | <https://www.google.com/maps/?q={},{}|map> | <{}|{}>".format(listing["price"], area_str, cats[listing["cats"]], listing["train_dist"], listing["stationname"], listing["geotag"][0], listing["geotag"][1], listing["url"], listing["name"])
     sc.api_call(
         "chat.postMessage", channel=settings.SLACK_CHANNEL, text=desc,
-        username='pybot', icon_emoji=':robot_face:'
+        username=settings.SLACK_USERNAME, icon_emoji=settings.SLACK_AVATAR
     )
 
 def find_points_of_interest(geotag, location):
@@ -50,38 +59,38 @@ def find_points_of_interest(geotag, location):
     :return: A dictionary containing annotations.
     """
     area_found = False
-    area = ""
-    min_dist = None
-    near_bart = False
-    bart_dist = "N/A"
-    bart = ""
+    areaname = ""
+    min_dist = 1000
+    near_train = False
+    train_dist = 1000
+    stationname = ""
     # Look to see if the listing is in any of the neighborhood boxes we defined.
     for a, coords in settings.BOXES.items():
         if in_box(geotag, coords):
-            area = a
+            areaname = a
             area_found = True
 
     # Check to see if the listing is near any transit stations.
     for station, coords in settings.TRANSIT_STATIONS.items():
         dist = coord_distance(coords[0], coords[1], geotag[0], geotag[1])
-        if (min_dist is None or dist < min_dist) and dist < settings.MAX_TRANSIT_DIST:
-            bart = station
-            near_bart = True
-
-        if (min_dist is None or dist < min_dist):
-            bart_dist = dist
+        if dist < min_dist:
+            train_dist = dist
+            min_dist = train_dist
+            stationname = station
+        if dist < settings.MAX_TRANSIT_DIST:
+            near_train = True
 
     # If the listing isn't in any of the boxes we defined, check to see if the string description of the neighborhood
     # matches anything in our list of neighborhoods.
-    if len(area) == 0:
+    if len(areaname) == 0:
         for hood in settings.NEIGHBORHOODS:
             if hood in location.lower():
-                area = hood
+                areaname = hood
 
     return {
         "area_found": area_found,
-        "area": area,
-        "near_bart": near_bart,
-        "bart_dist": bart_dist,
-        "bart": bart
+        "areaname": areaname,
+        "near_train": near_train,
+        "train_dist": train_dist,
+        "stationname": stationname
     }
