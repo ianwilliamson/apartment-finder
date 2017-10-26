@@ -45,7 +45,7 @@ def scrape_area(area):
     :return: A list of results.
     """
     cl_h = CraigslistHousing(site=settings.CRAIGSLIST_SITE, area=area, category=settings.CRAIGSLIST_HOUSING_SECTION,
-                             filters={'max_price': settings.MAX_PRICE, "min_price": settings.MIN_PRICE})
+            filters={'max_price': settings.MAX_PRICE, "min_price": settings.MIN_PRICE, "posted_today": True} )
 
     results = []
     gen = cl_h.get_results(sort_by='newest', geotagged=True, limit=20,include_details=True)
@@ -88,9 +88,9 @@ def scrape_area(area):
 
             cats = 2
             body = result["body"].lower()
-            if ("cats not allowed" in body) or ("no pets" in body):
+            if ("cats not allowed" in body) or ("no pets" in body) or ("no pet" in body):
                 cats = 0
-            elif " cats " in body:
+            elif (" cats " in body) or ("purrr" in body):
                 cats = 1
             result["cats"] = cats
 

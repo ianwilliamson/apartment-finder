@@ -38,13 +38,13 @@ def post_listing_to_slack(sc, listing):
     cats=dict()
     cats[0] = ":cat::x:"
     cats[1] = ":cat::smiley_cat:"
-    cats[2] = ":cat::question:"
+    cats[2] = ""
 
     if listing["area"] is None:
         area_str = "____ sq ft"
     else:
         area_str = listing["area"].replace("ft2"," sq ft")
-    desc = "*{}*, {} | {} | {:.2f} mi - *{}* | <https://www.google.com/maps/?q={},{}|map> | <{}|{}>".format(listing["price"], area_str, cats[listing["cats"]], listing["train_dist"], listing["stationname"], listing["geotag"][0], listing["geotag"][1], listing["url"], listing["name"])
+    desc = "*{}*, {} | {:.2f} mi - *{}* | <https://www.google.com/maps/?q={},{}|map> | {} <{}|{}>".format(listing["price"], area_str, listing["train_dist"], listing["stationname"], listing["geotag"][0], listing["geotag"][1], cats[listing["cats"]], listing["url"], listing["name"])
     sc.api_call(
         "chat.postMessage", channel=settings.SLACK_CHANNEL, text=desc,
         username=settings.SLACK_USERNAME, icon_emoji=settings.SLACK_AVATAR

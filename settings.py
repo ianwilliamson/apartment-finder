@@ -6,7 +6,7 @@ import os
 MIN_PRICE = 1000
 
 # The maximum rent you want to pay per month.
-MAX_PRICE = 3000
+MAX_PRICE = 2800
 
 ## Location preferences
 
@@ -36,17 +36,15 @@ NEIGHBORHOODS = []
 ## Transit preferences
 
 # The farthest you want to live from a transit stop.
-MAX_TRANSIT_DIST = 2.75 # miles
+MAX_TRANSIT_DIST = 2 # miles
 
 # Transit stations you want to check against.  Every coordinate here will be checked against each listing,
 # and the closest station name will be added to the result and posted into Slack.
 TRANSIT_STATIONS = {
-    'santaclara':   [37.354077, -121.936582],
     'lawrence':     [37.370444, -121.996069],
     'sunnyvale':    [37.378392, -122.030794],
     'mountainview': [37.394567, -122.075990],
-    'sanantonio':   [37.407216, -122.107127],
-    'milbrae':      [37.600082, -122.386552]
+    'sanantonio':   [37.407264, -122.107073]
 }
 
 ## Search type preferences
