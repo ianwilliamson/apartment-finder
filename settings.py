@@ -1,3 +1,4 @@
+from shapely.geometry.polygon import Polygon
 import os
 
 ## Price
@@ -7,6 +8,8 @@ MIN_PRICE = 1000
 
 # The maximum rent you want to pay per month.
 MAX_PRICE = 2800
+
+MIN_FEET = 600
 
 ## Location preferences
 
@@ -47,6 +50,25 @@ TRANSIT_STATIONS = {
     'sanantonio':   [37.407264, -122.107073]
 }
 
+POLYGONS = {
+        'the_polygon': Polygon([
+            (37.414816, -122.118444),
+            (37.424473, -122.097250),
+            (37.414551, -122.083682),
+            (37.408535, -122.070044),
+            (37.400691, -122.035674),
+            (37.395649, -122.012829),
+            (37.391176, -121.996054),
+            (37.382011, -121.963947),
+            (37.366082, -121.965050),
+            (37.352382, -121.968590),
+            (37.352181, -122.014118),
+            (37.364261, -122.032507),
+            (37.370669, -122.077826),
+            (37.399521, -122.132630)
+                        ])
+}
+
 ## Search type preferences
 
 # The Craigslist section underneath housing that you want to search in.
@@ -64,7 +86,7 @@ SLEEP_INTERVAL = 20 * 60 # 20 minutes
 
 # Which slack channel to post the listings into.
 SLACK_CHANNEL = "#housing"
-
+SLACK_CHANNEL_IGNORED = "#housing-ignored"
 # The token that allows us to connect to slack.
 # Should be put in private.py, or set as an environment variable.
 SLACK_TOKEN = os.getenv('SLACK_TOKEN', "")

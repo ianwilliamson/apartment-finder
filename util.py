@@ -1,5 +1,7 @@
 import settings
 import math
+from shapely.geometry import Point
+from shapely.geometry.polygon import Polygon
 
 def coord_distance(lat1, lon1, lat2, lon2):
     """
@@ -29,7 +31,7 @@ def in_box(coords, box):
         return True
     return False
 
-def post_listing_to_slack(sc, listing):
+def post_listing_to_slack(sc, listing, channel):
     """
     Posts the listing to slack.
     :param sc: A slack client.
@@ -39,14 +41,33 @@ def post_listing_to_slack(sc, listing):
     cats[0] = ":cat::x:"
     cats[1] = ":cat::smiley_cat:"
     cats[2] = ""
+    listing["cats"] = cats[listing["cats"]]
 
     if listing["area"] is None:
-        area_str = "____ sq ft"
+        listing["area"] = "____ sq ft"
     else:
-        area_str = listing["area"].replace("ft2"," sq ft")
-    desc = "*{}*, {} | {:.2f} mi - *{}* | <https://www.google.com/maps/?q={},{}|map> | {} <{}|{}>".format(listing["price"], area_str, listing["train_dist"], listing["stationname"], listing["geotag"][0], listing["geotag"][1], cats[listing["cats"]], listing["url"], listing["name"])
+        listing["area"] = listing["area"].replace("ft2"," sq ft")
+
+    if listing["geotag"] is None:
+        listing["geotag"] = [0,0]
+    if 'train_dist' not in listing:
+        listing["train_dist"] = 100 
+    if 'stationname' not in listing:
+        listing["stationname"] = '???????'
+
+    desc = "*{}*, {} | {:.2f} mi - *{}* | <https://www.google.com/maps/?q={},{}|map> | {} <{}|{}>".format(
+            listing["price"],
+            listing["area"],
+            listing["train_dist"],
+            listing["stationname"],
+            listing["geotag"][0],
+            listing["geotag"][1],
+            listing["cats"],
+            listing["url"],
+            listing["name"] )
+
     sc.api_call(
-        "chat.postMessage", channel=settings.SLACK_CHANNEL, text=desc,
+        "chat.postMessage", channel=channel, text=desc,
         username=settings.SLACK_USERNAME, icon_emoji=settings.SLACK_AVATAR
     )
 
@@ -65,8 +86,8 @@ def find_points_of_interest(geotag, location):
     train_dist = 1000
     stationname = ""
     # Look to see if the listing is in any of the neighborhood boxes we defined.
-    for a, coords in settings.BOXES.items():
-        if in_box(geotag, coords):
+    for a, polygon in settings.POLYGONS.items():
+        if polygon.contains(Point(geotag)):
             areaname = a
             area_found = True
 

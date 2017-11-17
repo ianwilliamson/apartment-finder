@@ -8,6 +8,8 @@ from util import post_listing_to_slack, find_points_of_interest
 from slackclient import SlackClient
 import time
 import settings
+from shapely.geometry import Point
+from shapely.geometry.polygon import Polygon
 
 engine = create_engine('sqlite:///listings.db', echo=False)
 
@@ -45,9 +47,10 @@ def scrape_area(area):
     :return: A list of results.
     """
     cl_h = CraigslistHousing(site=settings.CRAIGSLIST_SITE, area=area, category=settings.CRAIGSLIST_HOUSING_SECTION,
-            filters={'max_price': settings.MAX_PRICE, "min_price": settings.MIN_PRICE, "posted_today": True} )
+            filters={'max_price': settings.MAX_PRICE, "min_price": settings.MIN_PRICE, "posted_today": True, 'min_ft2': settings.MIN_FEET} )
 
     results = []
+    results_ignored = []
     gen = cl_h.get_results(sort_by='newest', geotagged=True, limit=20,include_details=True)
     while True:
         try:
@@ -113,10 +116,13 @@ def scrape_area(area):
             session.commit()
 
             # Return the result if it's near a bart station, or if it is in an area we defined.
-            if result["cats"] and (result["near_train"] or len(result["areaname"]) > 0):
+#            if result["cats"] and (result["near_train"] or len(result["areaname"]) > 0):
+            if result["cats"] and result["near_train"] and len(result["areaname"]) > 0:
                 results.append(result)
+            else:
+                results_ignored.append(result)
 
-    return results
+    return (results,results_ignored)
 
 def do_scrape():
     """
@@ -128,11 +134,18 @@ def do_scrape():
 
     # Get all the results from craigslist.
     all_results = []
+    ignored_results = []
     for area in settings.AREAS:
-        all_results += scrape_area(area)
+        (results,results_ignored) = scrape_area(area)
+        all_results += results
+        ignored_results += results_ignored
 
-    print("{}: Got {} results".format(time.ctime(), len(all_results)))
+    print("{}: Got {} good results, ignoring {} results".format(time.ctime(), len(all_results), len(ignored_results)))
 
     # Post each result to slack.
     for result in all_results:
-        post_listing_to_slack(sc, result)
+        post_listing_to_slack(sc, result, channel = settings.SLACK_CHANNEL)
+
+    for result in ignored_results:
+        post_listing_to_slack(sc, result, channel = settings.SLACK_CHANNEL_IGNORED)
+
